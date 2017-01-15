@@ -67,37 +67,37 @@ const getCurrentTrack = () => {
 };
 
 function main() {
-  // get the name of the song which is currently playing
-  getCurrentTrack()
-    .then(res => {
-      if (res.id !== state.currentSongId) {
-        state.currentSongId = res.id;
-        return fetchFirst(res.artist, res.name);
-      }
-    })
-    .catch(onError);
+  if (isInManualMode) {
+    fetchFirst(argv.artist, argv.song).catch(bubbleUpError).catch(onError);
+  } else {
+    // get the name of the song which is currently playing
+    getCurrentTrack()
+      .then(res => {
+        if (res.id !== state.currentSongId) {
+          state.currentSongId = res.id;
+          return fetchFirst(res.artist, res.name);
+        }
+      })
+      .catch(onError);
 
-  setTimeout(main, 1000);
+    setTimeout(main, 1000);
+  }
 }
 
-if (isInManualMode) {
-  fetchFirst(argv.artist, argv.song).catch(bubbleUpError).catch(onError);
-} else {
-  const selectArrangement = {
-    name: 'selectArrangement',
-    message: 'Select a type of arrangement:',
-    type: 'list',
-    choices: [{
-      name: 'Tab',
-      value: 'tab'
-    }, {
-      name: 'Chords',
-      value: 'crd'
-    }]
-  };
+const selectArrangement = {
+  name: 'selectArrangement',
+  message: 'Select a type of arrangement:',
+  type: 'list',
+  choices: [{
+    name: 'Tab',
+    value: 'tab'
+  }, {
+    name: 'Chords',
+    value: 'crd'
+  }]
+};
 
-  inquirer.prompt([selectArrangement], a => {
-    state.arrangement = a.selectArrangement;
-    main();
-  });
-}
+inquirer.prompt([selectArrangement], a => {
+  state.arrangement = a.selectArrangement;
+  main();
+});
