@@ -3,6 +3,7 @@ const fetch = require('node-fetch');
 const snakeCase = require('lodash.snakecase');
 const console = require('better-console');
 const minimist = require('minimist');
+const inquirer = require('inquirer');
 const nodeSpotifyWebHelper = require('node-spotify-webhelper');
 
 const spotify = new nodeSpotifyWebHelper.SpotifyWebHelper();
@@ -25,13 +26,9 @@ if (isInManualMode && (!argv.artist || !argv.song)) {
   process.exit(1);
 }
 
-if (!argv.tab && !argv.crd) {
-  console.error('\nYou must pass an argument ("--tab" or "--crd"). Aborting\n');
-  process.exit(1);
-}
-
 const state = {
-  currentSongUri: null
+  currentSongUri: null,
+  arrangement: null
 };
 
 function ultimateGuitar(url) {
@@ -42,7 +39,12 @@ function ultimateGuitar(url) {
 
 function fetchFirst(artist, song) {
   console.reset();
-  const url = `/${artist.charAt(0)}/${snakeCase(artist)}/${snakeCase(song)}_${argv.tab ? 'tab' : 'crd'}.htm`; // eslint-disable-line max-len
+
+  const arrangement = state.arrangement;
+  const showTab = arrangement === 'tab';
+
+  const url = `/${artist.charAt(0)}/${snakeCase(artist)}/${snakeCase(song)}_${arrangement}.htm`; // eslint-disable-line max-len
+
   return ultimateGuitar(url)
     .then(html => {
       title(`${song} (${artist})`);
@@ -54,7 +56,7 @@ function fetchFirst(artist, song) {
         const cleanedText = html2text.fromString(cleanedContent).replace(/\[\/?ch\]/g, '');
         console.info(cleanedText);
       } else {
-        console.error(`No ${argv.tab ? 'tab' : 'chords'} found for "${song} (${artist})"`);
+        console.error(`No ${showTab ? 'tab' : 'chords'} found for "${song} (${artist})"`);
       }
     })
     .catch(bubbleUpError);
@@ -73,21 +75,37 @@ const getSpotifyStatus = () => {
 };
 
 function main() {
-  if (!isInManualMode) {
-    // get the name of the song which is currently playing
-    getSpotifyStatus()
-      .then(res => {
-        if (res.track.track_resource.uri !== state.currentSongUri) {
-          state.currentSongUri = res.track.track_resource.uri;
-          return fetchFirst(res.track.artist_resource.name, res.track.track_resource.name);
-        }
-      })
-      .catch(onError);
+  // get the name of the song which is currently playing
+  getSpotifyStatus()
+    .then(res => {
+      if (res.track.track_resource.uri !== state.currentSongUri) {
+        state.currentSongUri = res.track.track_resource.uri;
+        return fetchFirst(res.track.artist_resource.name, res.track.track_resource.name);
+      }
+    })
+    .catch(onError);
 
-    setTimeout(main, 1000);
-  } else {
-    fetchFirst(argv.artist, argv.song).catch(bubbleUpError).catch(onError);
-  }
+  setTimeout(main, 1000);
 }
 
-main();
+if (isInManualMode) {
+  fetchFirst(argv.artist, argv.song).catch(bubbleUpError).catch(onError);
+} else {
+  const selectArrangement = {
+    name: 'selectArrangement',
+    message: 'Select a type of arrangement:',
+    type: 'list',
+    choices: [{
+      name: 'Tab',
+      value: 'tab'
+    }, {
+      name: 'Chords',
+      value: 'crd'
+    }]
+  };
+
+  inquirer.prompt([selectArrangement], a => {
+    state.arrangement = a.selectArrangement;
+    main();
+  });
+}
