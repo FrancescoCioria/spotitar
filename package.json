@@ -13,7 +13,7 @@
     "lodash.snakecase": "^4.1.1",
     "minimist": "^1.2.0",
     "node-fetch": "^1.6.3",
-    "node-spotify-webhelper": "0.0.3"
+    "spotify-node-applescript": "^0.2.2"
   },
   "devDependencies": {
     "babel-eslint": "^7.1.1",

@@ -4,9 +4,7 @@ const snakeCase = require('lodash.snakecase');
 const console = require('better-console');
 const minimist = require('minimist');
 const inquirer = require('inquirer');
-const nodeSpotifyWebHelper = require('node-spotify-webhelper');
-
-const spotify = new nodeSpotifyWebHelper.SpotifyWebHelper();
+const spotify = require('spotify-node-applescript');
 
 console.reset = () => console.log('\x1Bc');
 
@@ -27,7 +25,7 @@ if (isInManualMode && (!argv.artist || !argv.song)) {
 }
 
 const state = {
-  currentSongUri: null,
+  currentSongId: null,
   arrangement: null
 };
 
@@ -62,25 +60,19 @@ function fetchFirst(artist, song) {
     .catch(bubbleUpError);
 }
 
-const getSpotifyStatus = () => {
-  return new Promise((resolve, reject) => {
-    spotify.getStatus((err, res) => {
-      if (err) {
-        reject(err);
-      }
-
-      resolve(res);
-    });
+const getCurrentTrack = () => {
+  return new Promise((resolve) => {
+    spotify.getTrack((err, res) => resolve(err || res));
   });
 };
 
 function main() {
   // get the name of the song which is currently playing
-  getSpotifyStatus()
+  getCurrentTrack()
     .then(res => {
-      if (res.track.track_resource.uri !== state.currentSongUri) {
-        state.currentSongUri = res.track.track_resource.uri;
-        return fetchFirst(res.track.artist_resource.name, res.track.track_resource.name);
+      if (res.id !== state.currentSongId) {
+        state.currentSongId = res.id;
+        return fetchFirst(res.artist, res.name);
       }
     })
     .catch(onError);
